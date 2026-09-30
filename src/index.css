@@ -1,0 +1,29 @@
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #202724;
+  background: #f4f5f0;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  --ink: #202724;
+  --muted: #858b85;
+  --line: #e7e9e3;
+  --canvas: #f4f5f0;
+  --paper: #fff;
+  --green: #236f57;
+  --green-dark: #17523f;
+  --lime: #d6ee78;
+  --soft-green: #eef4df;
+  --coral: #e67a5e;
+  --mono: 'DM Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, textarea { font: inherit; }
+button { color: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #53846e; outline-offset: 2px; }
+::selection { color: var(--ink); background: var(--lime); }
