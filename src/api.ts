@@ -35,6 +35,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getHealth = () => request<{ ok: boolean }>('/health')
 export const getConversations = () => request<Conversation[]>('/api/conversations')
+export const createRider = (name: string, phone: string) => request<Conversation>('/api/conversations', { method: 'POST', body: JSON.stringify({ name, phone }) })
 export const getMessages = (id: string) => request<Message[]>(`/api/conversations/${encodeURIComponent(id)}/messages`)
 export const getNote = (id: string) => request<InquiryNote>(`/api/conversations/${encodeURIComponent(id)}/note`)
 export const saveNote = (id: string, content: string) => request<InquiryNote>(`/api/conversations/${encodeURIComponent(id)}/note`, { method: 'PUT', body: JSON.stringify({ content }) })

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Archive, ArrowLeft, Check, CheckCheck, ChevronDown, CircleHelp, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Search, Send, ShieldCheck, Wifi, WifiOff } from 'lucide-react'
-import { getConversations, getHealth, getMessages, getNote, saveNote, sendMessage, type Conversation, type Message } from './api'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type WheelEvent } from 'react'
+import { Archive, ArrowLeft, Check, CheckCheck, ChevronDown, CircleHelp, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, Wifi, WifiOff, X } from 'lucide-react'
+import { createRider, getConversations, getHealth, getMessages, getNote, saveNote, sendMessage, type Conversation, type Message } from './api'
 import './App.css'
 
 function initials(name: string) {
@@ -14,6 +14,14 @@ function formatTime(value: string | null) {
   return date.toDateString() === new Date().toDateString()
     ? new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)
     : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+}
+
+function routeWheel(event: WheelEvent<HTMLElement>, scrollerSelector: string, nativeSelector: string) {
+  const target = event.target
+  if (target instanceof Element && target.closest(`${nativeSelector}, input, textarea, button, a`)) return
+  const scroller = event.currentTarget.querySelector<HTMLElement>(scrollerSelector)
+  if (!scroller || event.deltaY === 0) return
+  scroller.scrollTop += event.deltaY
 }
 
 function App() {
@@ -30,11 +38,17 @@ function App() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [savingMessage, setSavingMessage] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [showCreateRider, setShowCreateRider] = useState(false)
+  const [riderName, setRiderName] = useState('')
+  const [riderPhone, setRiderPhone] = useState('')
+  const [creatingRider, setCreatingRider] = useState(false)
+  const [createRiderError, setCreateRiderError] = useState('')
   const [showNotePanel, setShowNotePanel] = useState(() => window.innerWidth > 1220)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const messageEndRef = useRef<HTMLDivElement>(null)
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? null
+  const replyAllowed = Boolean(selected && !selected.opted_out && selected.last_inbound_at && Date.now() - new Date(selected.last_inbound_at).getTime() >= 0 && Date.now() - new Date(selected.last_inbound_at).getTime() < 24 * 60 * 60 * 1000)
   const filteredConversations = useMemo(() => {
     const query = search.trim().toLowerCase()
     return conversations.filter((conversation) => {
@@ -139,6 +153,25 @@ function App() {
     } finally { setSavingNote(false) }
   }
 
+  async function handleCreateRider(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (creatingRider) return
+    setCreatingRider(true)
+    setCreateRiderError('')
+    try {
+      const created = await createRider(riderName.trim(), riderPhone.trim())
+      setConversations((current) => [created, ...current.filter((item) => item.id !== created.id)])
+      setSelectedId(created.id)
+      setRiderName('')
+      setRiderPhone('')
+      setShowCreateRider(false)
+      setNotice('Rider added to your inbox')
+      setError('')
+    } catch (cause) {
+      setCreateRiderError(cause instanceof Error ? cause.message : 'Rider could not be created.')
+    } finally { setCreatingRider(false) }
+  }
+
   return (
     <main className="desk-shell">
       <aside className="app-rail" aria-label="Main navigation">
@@ -151,10 +184,10 @@ function App() {
         <div className="staff-avatar" title="Staff workspace">A</div>
       </aside>
 
-      <section className={`conversation-list ${selectedId ? 'has-selection' : ''}`} id="inbox" aria-label="Conversations">
+      <section className={`conversation-list ${selectedId ? 'has-selection' : ''}`} id="inbox" aria-label="Conversations" onWheel={(event) => routeWheel(event, '.conversation-items', '.conversation-items')}>
         <header className="list-header">
-          <div className="eyebrow"><span className="eyebrow-dot" /> PIKIATA / MESSAGES</div>
-          <div className="list-title-row"><h1>Inbox</h1><span className="conversation-count">{conversations.length.toString().padStart(2, '0')}</span></div>
+          <div className="eyebrow"><span className="eyebrow-dot" /> PIKIPATA / MESSAGES</div>
+          <div className="list-title-row"><h1>Inbox</h1><span className="conversation-count">{conversations.length.toString().padStart(2, '0')}</span><button className="create-rider-button" type="button" onClick={() => { setShowCreateRider(true); setCreateRiderError('') }}><Plus size={14} /> Create rider</button></div>
           <div className={`connection-pill ${connection}`}><span className="connection-dot" />{connection === 'connected' ? 'Connected' : connection === 'checking' ? 'Connecting' : 'Offline'}<ChevronDown size={13} /></div>
           <label className="search-box"><Search size={17} aria-hidden="true" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or number" aria-label="Search conversations" /><kbd>/</kbd></label>
           <div className="filter-tabs" role="tablist" aria-label="Conversation filters">
@@ -175,7 +208,7 @@ function App() {
         <footer className="list-footer"><span><span className="live-dot" /> Updates every 10 sec</span><span>WhatsApp Cloud</span></footer>
       </section>
 
-      <section className={`thread-panel ${selectedId ? 'thread-open' : ''}`} aria-label="Message thread">
+      <section className={`thread-panel ${selectedId ? 'thread-open' : ''}`} aria-label="Message thread" onWheel={(event) => routeWheel(event, '.message-scroll', '.message-scroll')}>
         {error && <div className="error-banner" role="alert"><CircleHelp size={16} /><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
         {selected ? <>
           <header className="thread-header">
@@ -192,17 +225,17 @@ function App() {
             <div ref={messageEndRef} />
           </div>
           <div className="composer-wrap">
-            {!selected.opted_out && <div className="composer-context"><ShieldCheck size={14} /> Replies are available inside Meta’s 24-hour service window.</div>}
+            {!selected.opted_out && <div className="composer-context"><ShieldCheck size={14} />{replyAllowed ? 'Replies are available inside Meta’s 24-hour service window.' : 'A reply is available after the customer messages you.'}</div>}
             <form className="composer" onSubmit={handleSend}>
-              <textarea aria-label="Write a reply" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder={selected.opted_out ? 'This contact has opted out' : 'Write a reply…'} maxLength={4096} disabled={selected.opted_out || savingMessage} />
-              <div className="composer-bottom"><span className="composer-hint">Enter to send <kbd>↵</kbd></span><div className="composer-send-row"><span className="character-count">{draft.length}/4096</span><button className="send-button" type="submit" disabled={!draft.trim() || savingMessage || selected.opted_out} aria-label="Send reply">{savingMessage ? <span className="button-spinner" /> : <><Send size={16} /> Send</>}</button></div></div>
+              <textarea aria-label="Write a reply" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder={selected.opted_out ? 'This contact has opted out' : replyAllowed ? 'Write a reply…' : 'Waiting for an inbound message'} maxLength={4096} disabled={!replyAllowed || savingMessage} />
+              <div className="composer-bottom"><span className="composer-hint">Enter to send <kbd>↵</kbd></span><div className="composer-send-row"><span className="character-count">{draft.length}/4096</span><button className="send-button" type="submit" disabled={!draft.trim() || savingMessage || !replyAllowed} aria-label="Send reply">{savingMessage ? <span className="button-spinner" /> : <><Send size={16} /> Send</>}</button></div></div>
             </form>
             <div className="composer-footnote">Messages are sent from your business WhatsApp number.</div>
           </div>
         </> : <div className="welcome-panel"><div className="welcome-graphic"><div className="graphic-line line-one" /><div className="graphic-line line-two" /><span className="graphic-bubble"><MessageCircle size={38} strokeWidth={1.4} /></span><span className="graphic-spark spark-one">✳</span><span className="graphic-spark spark-two">·</span></div><span className="eyebrow">YOUR CUSTOMER DESK</span><h2>{connection === 'offline' ? 'Connect to your inbox' : 'A little more room to listen.'}</h2><p>{connection === 'offline' ? 'Check that the backend and local API proxy are running.' : 'Choose a conversation to read the thread and reply.'}</p><span className="welcome-foot"><span className="live-dot" /> PRIVATE STAFF INBOX</span></div>}
       </section>
 
-      {selected && showNotePanel && <aside className="note-panel" aria-label="Customer inquiry note">
+      {selected && showNotePanel && <aside className="note-panel" aria-label="Customer inquiry note" onWheel={(event) => routeWheel(event, '.note-editor', '.note-editor')}>
         <header className="note-header"><div><span className="eyebrow">INTERNAL ONLY</span><h2>Inquiry note</h2></div><span className="note-lock"><ShieldCheck size={16} /></span></header>
         <div className="note-contact"><span className="contact-avatar mini-avatar">{initials(selected.display_name || selected.phone)}</span><div><strong>{selected.display_name || 'Customer'}</strong><span>{selected.phone}</span></div></div>
         <label className="note-label" htmlFor="customer-note">SHARED WITH YOUR TEAM</label>
@@ -211,6 +244,21 @@ function App() {
         <div className="note-save-area"><button className="save-note-button" type="button" onClick={() => void handleSaveNote()} disabled={savingNote}>{savingNote ? <span className="button-spinner dark" /> : <Check size={16} />}{savingNote ? 'Saving…' : 'Save note'}</button><span>{noteUpdatedAt ? `Updated ${formatTime(noteUpdatedAt)}` : 'Not saved yet'}</span></div>
         <div className="note-disclaimer"><ShieldCheck size={15} /><span>Private to your team. Never sent to the customer.</span></div>
       </aside>}
+      {showCreateRider && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCreateRider(false) }}>
+        <section className="create-rider-modal" role="dialog" aria-modal="true" aria-labelledby="create-rider-title">
+          <header className="modal-header"><div><span className="eyebrow">NEW CONTACT</span><h2 id="create-rider-title">Create rider</h2></div><button className="icon-button" type="button" title="Close" aria-label="Close create rider form" onClick={() => setShowCreateRider(false)}><X size={19} /></button></header>
+          <p className="modal-description">Save a rider to the inbox. They can be messaged after they contact your business on WhatsApp.</p>
+          <form className="create-rider-form" onSubmit={handleCreateRider}>
+            <label htmlFor="rider-name">Rider name</label>
+            <input id="rider-name" name="name" autoComplete="name" value={riderName} onChange={(event) => setRiderName(event.target.value)} placeholder="e.g. Amina Otieno" minLength={1} maxLength={255} required autoFocus />
+            <label htmlFor="rider-phone">WhatsApp phone number</label>
+              <input id="rider-phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="+254 712 345 678" pattern="\+[1-9][0-9 ]{6,22}" maxLength={24} aria-describedby="rider-phone-help" required />
+            <span id="rider-phone-help" className="field-help">Include the country code, for example +254.</span>
+            {createRiderError && <div className="modal-error" role="alert">{createRiderError}</div>}
+            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setShowCreateRider(false)}>Cancel</button><button className="create-submit-button" type="submit" disabled={creatingRider || !riderName.trim() || !riderPhone.trim()}>{creatingRider ? <span className="button-spinner" /> : <Plus size={15} />}{creatingRider ? 'Creating…' : 'Create rider'}</button></div>
+          </form>
+        </section>
+      </div>}
       {notice && <div className="toast" role="status"><CheckCheck size={17} />{notice}</div>}
     </main>
   )
