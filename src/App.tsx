@@ -89,6 +89,13 @@ function App() {
     return () => { active = false; window.clearInterval(timer) }
   }, [])
 
+  function clearThread() {
+    setMessages([])
+    setNote('')
+    setNoteUpdatedAt(null)
+    setThreadAccessVerified(false)
+  }
+
   useEffect(() => {
     if (!selectedId) {
       setMessages([])
@@ -109,10 +116,7 @@ function App() {
         setThreadAccessVerified(true)
       } catch (cause) {
         if (active) {
-          setThreadAccessVerified(false)
-          setMessages([])
-          setNote('')
-          setNoteUpdatedAt(null)
+          clearThread()
           setError(cause instanceof Error ? cause.message : 'Could not load this conversation.')
           setSelectedId(null)
         }
@@ -130,10 +134,7 @@ function App() {
         }
       } catch (cause) {
         if (active) {
-          setThreadAccessVerified(false)
-          setMessages([])
-          setNote('')
-          setNoteUpdatedAt(null)
+          clearThread()
           setError(cause instanceof Error ? cause.message : 'Could not refresh messages.')
           setSelectedId(null)
         }
@@ -144,9 +145,7 @@ function App() {
 
   useEffect(() => { messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, selectedId])
   useEffect(() => {
-    const updateNow = () => setNow(Date.now())
-    updateNow()
-    const timer = window.setInterval(updateNow, 30_000)
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(timer)
   }, [])
 
@@ -198,10 +197,7 @@ function App() {
       setConversations((current) => current.map((item) => (
         item.id === selected.id ? { ...item, assigned_staff_id: destination } : item
       )))
-      setMessages([])
-      setNote('')
-      setNoteUpdatedAt(null)
-      setThreadAccessVerified(false)
+      clearThread()
       setSelectedId(null)
       setShowTransfer(false)
       setTargetStaffId('')
@@ -256,7 +252,7 @@ function App() {
           {loadingConversations && conversations.length === 0 ? <div className="list-state"><span className="loader" /> Loading conversations</div> : filteredConversations.length === 0 ? (
             <div className="list-state empty-list-state"><div className="empty-symbol"><MessageCircle size={21} /></div><strong>{search ? 'No matching conversations' : 'Nothing here yet'}</strong><span>{search ? 'Try another name or number.' : 'New WhatsApp messages will show up here.'}</span></div>
           ) : filteredConversations.map((conversation, index) => (
-            <button key={conversation.id} type="button" className={`conversation-item ${selectedId === conversation.id ? 'selected' : ''}`} onClick={() => { setMessages([]); setNote(''); setNoteUpdatedAt(null); setThreadAccessVerified(false); setSelectedId(conversation.id); setError('') }} style={{ animationDelay: `${Math.min(index * 35, 245)}ms` }}>
+            <button key={conversation.id} type="button" className={`conversation-item ${selectedId === conversation.id ? 'selected' : ''}`} onClick={() => { clearThread(); setSelectedId(conversation.id); setError('') }} style={{ animationDelay: `${Math.min(index * 35, 245)}ms` }}>
               <span className={`contact-avatar avatar-${index % 5}`}>{initials(conversation.display_name || conversation.phone)}</span>
               <span className="conversation-copy"><span className="conversation-name-row"><strong>{conversation.display_name || conversation.phone}</strong><time>{formatTime(conversation.last_inbound_at || conversation.created_at)}</time></span><span className="conversation-preview">{conversation.phone}{conversation.opted_out ? ' · opted out' : ''}</span></span>
               {selectedId === conversation.id && <span className="selection-mark" />}
