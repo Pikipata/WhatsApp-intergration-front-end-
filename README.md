@@ -5,11 +5,13 @@ React + TypeScript staff inbox for the WhatsApp LMS FastAPI backend.
 ## Run locally
 
 1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env.local` and set `API_STAFF_KEY` to the backend's `STAFF_API_KEY`. This key is read only by the Vite development server and is never exposed to browser code. Do not use a `VITE_` prefix for secrets.
+2. Copy `.env.example` to `.env.local` and set `API_STAFF_KEY` to the backend's `STAFF_API_KEY`. Set `API_AUTHENTICATED_STAFF_ID` to a local caregiver ID for development. These values are read only by the Vite development server and are never exposed to browser code. Do not use a `VITE_` prefix for secrets.
 3. Make sure the backend is running at `API_PROXY_TARGET` and MySQL is available.
 4. Run `npm run dev` and open the URL printed by Vite.
 
-The development server proxies `/api` and `/health` to FastAPI. Conversations refresh every 10 seconds and the selected thread refreshes every 5 seconds. Replies and internal notes use the existing backend routes.# React + TypeScript + Vite
+The development server proxies `/api` and `/health` to FastAPI. Conversations refresh every 10 seconds and the selected thread refreshes every 5 seconds. Replies and internal notes use the existing backend routes. The inbox's **Transfer** control is beside the selected customer's chat header and asks for the target caregiver ID.
+
+For production, the authenticated LMS/proxy must inject `X-Authenticated-Staff-ID` from the signed-in staff session and must strip any client-supplied header with that name. Never rely on the local Vite identity setting in a shared or production deployment.# React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

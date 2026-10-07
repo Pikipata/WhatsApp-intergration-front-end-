@@ -4,6 +4,9 @@ export type Conversation = {
   phone: string
   display_name: string | null
   opted_out: boolean
+  needs_agent: boolean
+  assigned_staff_id: string | null
+  resolved_at: string | null
   last_inbound_at: string | null
   created_at: string
 }
@@ -40,3 +43,4 @@ export const getMessages = (id: string) => request<Message[]>(`/api/conversation
 export const getNote = (id: string) => request<InquiryNote>(`/api/conversations/${encodeURIComponent(id)}/note`)
 export const saveNote = (id: string, content: string) => request<InquiryNote>(`/api/conversations/${encodeURIComponent(id)}/note`, { method: 'PUT', body: JSON.stringify({ content }) })
 export const sendMessage = (id: string, text: string) => request<{ messageId: string; providerId: string }>(`/api/conversations/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ text }) })
+export const transferConversation = (id: string, targetStaffId: string) => request<{ conversationId: string; assignedStaffId: string }>(`/api/conversations/${encodeURIComponent(id)}/transfer`, { method: 'POST', body: JSON.stringify({ targetStaffId }) })
