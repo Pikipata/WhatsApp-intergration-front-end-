@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type WheelEvent } from 'react'
-import { Archive, ArrowLeft, ArrowRightLeft, Check, CheckCheck, ChevronDown, CircleHelp, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, Wifi, WifiOff, X } from 'lucide-react'
-import { createRider, getConversations, getHealth, getMessages, getNote, saveNote, sendMessage, transferConversation, type Conversation, type Message } from './api'
+import { Archive, ArrowLeft, ArrowRightLeft, Check, CheckCheck, ChevronDown, CircleHelp, Copy, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, UsersRound, Wifi, WifiOff, X } from 'lucide-react'
+import { createRider, getConversations, getHealth, getMessages, getNote, getNotesDirectory, saveNote, sendMessage, transferConversation, type Conversation, type Message, type NoteDirectoryEntry } from './api'
 import './App.css'
 
 function initials(name: string) {
@@ -23,7 +23,38 @@ function routeWheel(event: WheelEvent<HTMLElement>, scrollerSelector: string, na
   if (!scroller || event.deltaY === 0) return
   scroller.scrollTop += event.deltaY
 }
+type NoteRevision = {
+  content: string
+  updated_at: string | null
+}
+const NOTE_HISTORY_KEY = 'pikipata-note-history-'
 
+function readNoteHistoryStore(): Record<string,NoteRevision[]> {
+  const raw = localStorage.getItem(NOTE_HISTORY_KEY)
+  if (!raw) return {}
+  const parsed: unknown = JSON.parse(raw)
+  if(typeof parsed !=="object" || parsed === null || Array.isArray(parsed)){
+    throw new Error ('Saved note history has a invalid format.')
+  }
+
+  const store:Record <string, NoteRevision [] > = {}
+
+  for (const [conversationId,value] of Object.entries(parsed)){
+    if (!Array.isArray(value)) {
+      throw new Error ("Saved note history has an invalid format.")
+    }
+    store[conversationId] = value.filter(
+      (item): item is NoteRevision =>
+        typeof item === 'object' && 
+      item !== null &&
+      'content' in item &&
+      typeof item.content ==  'string' &&
+      'updated_at' in item &&
+      typeof item.updated_at === 'string',
+    )
+  }
+  return store
+}
 function App() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -42,6 +73,10 @@ function App() {
   const [showCreateRider, setShowCreateRider] = useState(false)
   const [riderName, setRiderName] = useState('')
   const [riderPhone, setRiderPhone] = useState('')
+  const [showNotesDirectory, setShowNotesDirectory] = useState(false)
+  const [notesDirectory, setNotesDirectory] = useState<NoteDirectoryEntry[]>([])
+  const [loadingNotesDirectory, setLoadingNotesDirectory] = useState(false)
+  const [noteHistory, setNoteHistory] = useState<NoteRevision[]>([])
   const [creatingRider, setCreatingRider] = useState(false)
   const [createRiderError, setCreateRiderError] = useState('')
   const [showTransfer, setShowTransfer] = useState(false)
@@ -145,6 +180,14 @@ function App() {
 
   useEffect(() => { messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, selectedId])
   useEffect(() => {
+    if (!selectedId) { setNoteHistory([]); return }
+    try {
+      setNoteHistory(readNoteHistoryStore()[selectedId] ?? [])
+    } catch {
+      setNoteHistory([])
+    }
+  }, [selectedId])
+  useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(timer)
   }, [])
@@ -171,14 +214,70 @@ function App() {
     } finally { setSavingMessage(false) }
   }
 
+  async function handleShowNotesDirectory() {
+    setLoadingNotesDirectory(true)
+    setError('')
+    try {
+      setNotesDirectory(await getNotesDirectory())
+      setShowNotesDirectory(true)
+      setShowNotePanel(true)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load conversations and notes.')
+    } finally { setLoadingNotesDirectory(false) }
+  }
+
+  function handleOpenNoteProfile(entry: NoteDirectoryEntry) {
+    setShowNotesDirectory(false)
+    setShowNotePanel(true)
+    clearThread()
+    setSelectedId(entry.conversation_id)
+    setError('')
+    try {
+      setNoteHistory(readNoteHistoryStore()[entry.conversation_id] ?? [])
+    } catch (cause) {
+      setNoteHistory([])
+      setError(cause instanceof Error ? cause.message : 'Could not load local note history.')
+    }
+  }
+
+  async function handleCopyNote() {
+    if (!note) {
+      setError('There is no note to copy.')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(note)
+      setNotice('Note copied — ready to paste into the project management system.')
+    } catch {
+      setError('Could not copy the note. Check clipboard permissions and try again.')
+    }
+  }
+
   async function handleSaveNote() {
     if (!selected || savingNote) return
+    const previousContent = note
+    const previousUpdatedAt = noteUpdatedAt
     setSavingNote(true)
     setError('')
     try {
-      const saved = await saveNote(selected.id, note)
+      const saved = await saveNote(selected.id, previousContent)
       setNote(saved.content)
       setNoteUpdatedAt(saved.updated_at)
+      if (previousUpdatedAt && previousContent !== saved.content) {
+        try {
+          const store = readNoteHistoryStore()
+          store[selected.id] = [...(store[selected.id] ?? []), { content: previousContent, updated_at: previousUpdatedAt }]
+          localStorage.setItem(NOTE_HISTORY_KEY, JSON.stringify(store))
+          setNoteHistory(store[selected.id])
+        } catch (cause) {
+          setError(cause instanceof Error ? `Note saved, but local edit history could not be stored: ${cause.message}` : 'Note saved, but local edit history could not be stored.')
+        }
+      }
+      setNotesDirectory((current) => current.map((entry) => (
+        entry.conversation_id === selected.id
+          ? { ...entry, content: saved.content, note_updated_at: saved.updated_at, activity_at: saved.updated_at ?? entry.activity_at }
+          : entry
+      )))
       setNotice('Note saved')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Your note could not be saved.')
@@ -242,7 +341,7 @@ function App() {
         <header className="list-header">
           <div className="eyebrow"><span className="eyebrow-dot" /> PIKIPATA / MESSAGES</div>
           <div className="list-title-row"><h1>Inbox</h1><span className="conversation-count">{conversations.length.toString().padStart(2, '0')}</span><button className="create-rider-button" type="button" onClick={() => { setShowCreateRider(true); setCreateRiderError('') }}><Plus size={14} /> Create rider</button></div>
-          <div className={`connection-pill ${connection}`}><span className="connection-dot" />{connection === 'connected' ? 'Connected' : connection === 'checking' ? 'Connecting' : 'Offline'}<ChevronDown size={13} /></div>
+                    <button className="notes-directory-button" type="button" onClick={() => void handleShowNotesDirectory()} disabled={loadingNotesDirectory}><UsersRound size={15} />{loadingNotesDirectory ? 'Loading notes…' : 'Conversations & notes'}</button>          <div className={`connection-pill ${connection}`}><span className="connection-dot" />{connection === 'connected' ? 'Connected' : connection === 'checking' ? 'Connecting' : 'Offline'}<ChevronDown size={13} /></div>
           <label className="search-box"><Search size={17} aria-hidden="true" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or number" aria-label="Search conversations" /><kbd>/</kbd></label>
           <div className="filter-tabs" role="tablist" aria-label="Conversation filters">
             {(['all', 'open', 'closed'] as const).map((value) => <button key={value} className={filter === value ? 'selected' : ''} type="button" role="tab" aria-selected={filter === value} onClick={() => setFilter(value)}>{value === 'all' ? 'All' : value === 'open' ? 'Open' : 'Closed'}{value === 'open' && <span className="tab-count">{conversations.filter((item) => !item.opted_out).length}</span>}</button>)}
@@ -289,14 +388,30 @@ function App() {
         </> : <div className="welcome-panel"><div className="welcome-graphic"><div className="graphic-line line-one" /><div className="graphic-line line-two" /><span className="graphic-bubble"><MessageCircle size={38} strokeWidth={1.4} /></span><span className="graphic-spark spark-one">✳</span><span className="graphic-spark spark-two">·</span></div><span className="eyebrow">YOUR CUSTOMER DESK</span><h2>{connection === 'offline' ? 'Connect to your inbox' : 'A little more room to listen.'}</h2><p>{connection === 'offline' ? 'Check that the backend and local API proxy are running.' : 'Choose a conversation to read the thread and reply.'}</p><span className="welcome-foot"><span className="live-dot" /> PRIVATE STAFF INBOX</span></div>}
       </section>
 
-      {selected && showNotePanel && <aside className="note-panel" aria-label="Customer inquiry note" onWheel={(event) => routeWheel(event, '.note-editor', '.note-editor')}>
-        <header className="note-header"><div><span className="eyebrow">INTERNAL ONLY</span><h2>Inquiry note</h2></div><span className="note-lock"><ShieldCheck size={16} /></span></header>
-        <div className="note-contact"><span className="contact-avatar mini-avatar">{initials(selected.display_name || selected.phone)}</span><div><strong>{selected.display_name || 'Customer'}</strong><span>{selected.phone}</span></div></div>
-        <label className="note-label" htmlFor="customer-note">SHARED WITH YOUR TEAM</label>
-        <textarea id="customer-note" className="note-editor" value={note} onChange={(event) => setNote(event.target.value)} maxLength={20000} placeholder="Add context, follow-ups, or details to remember…" />
-        <div className="note-count">{note.length.toLocaleString()} / 20,000</div>
-        <div className="note-save-area"><button className="save-note-button" type="button" onClick={() => void handleSaveNote()} disabled={savingNote}>{savingNote ? <span className="button-spinner dark" /> : <Check size={16} />}{savingNote ? 'Saving…' : 'Save note'}</button><span>{noteUpdatedAt ? `Updated ${formatTime(noteUpdatedAt)}` : 'Not saved yet'}</span></div>
-        <div className="note-disclaimer"><ShieldCheck size={15} /><span>Private to your team. Never sent to the customer.</span></div>
+      {showNotePanel && (selected || showNotesDirectory) && <aside className="note-panel" aria-label="Conversation notes" onWheel={(event) => routeWheel(event, showNotesDirectory ? '.notes-directory' : '.note-editor', '.note-editor, .notes-directory, .note-history')}>
+        <header className="note-header"><div><span className="eyebrow">INTERNAL ONLY</span><h2>{showNotesDirectory ? 'Conversations & notes' : 'Inquiry note'}</h2></div>{showNotesDirectory ? <button className="icon-button" type="button" aria-label="Close conversations and notes" onClick={() => setShowNotesDirectory(false)}><X size={18} /></button> : <span className="note-lock"><ShieldCheck size={16} /></span>}</header>
+        {showNotesDirectory ? <div className="notes-directory">
+          {notesDirectory.length === 0 ? <p>No assigned conversations found.</p> : notesDirectory.map((entry) => (
+            <button className="notes-directory-item" key={entry.conversation_id} type="button" onClick={() => handleOpenNoteProfile(entry)}>
+              <span className="notes-directory-item-heading"><strong>{entry.display_name || entry.phone}</strong><time>{formatTime(entry.activity_at)}</time></span>
+              <span>{entry.phone}</span>
+              <span className="notes-directory-preview">{entry.content || 'No saved note yet'}</span>
+            </button>
+          ))}
+        </div> : selected ? <>
+          <div className="note-contact"><span className="contact-avatar mini-avatar">{initials(selected.display_name || selected.phone)}</span><div><strong>{selected.display_name || 'Customer'}</strong><span>{selected.phone}</span></div></div>
+          <label className="note-label" htmlFor="customer-note">SHARED WITH YOUR TEAM</label>
+          <textarea id="customer-note" className="note-editor" value={note} onChange={(event) => setNote(event.target.value)} maxLength={20000} placeholder="Add context, follow-ups, or details to remember…" />
+          <div className="note-count">{note.length.toLocaleString()} / 20,000</div>
+          <div className="note-save-area"><button className="save-note-button" type="button" onClick={() => void handleSaveNote()} disabled={savingNote}>{savingNote ? <span className="button-spinner dark" /> : <Check size={16} />}{savingNote ? 'Saving…' : 'Save note'}</button><span>{noteUpdatedAt ? `Updated ${formatTime(noteUpdatedAt)}` : 'Not saved yet'}</span><button className="save-note-button" type="button" onClick={() => void handleCopyNote()}><Copy size={15} />Copy note for project management</button></div>
+          <section className="note-history" aria-label="Local note edit history">
+            <strong>Previous saved versions on this browser</strong>
+            {noteHistory.length === 0 ? <span>No previous edits recorded in this browser.</span> : [...noteHistory].reverse().map((revision, index) => (
+              <article className="note-history-item" key={`${revision.updated_at}-${index}`}><time>{formatTime(revision.updated_at)}</time><p>{revision.content}</p></article>
+            ))}
+          </section>
+          <div className="note-disclaimer"><ShieldCheck size={15} /><span>Private to your team. Edit history is stored only in this browser.</span></div>
+        </> : null}
       </aside>}
       {showCreateRider && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowCreateRider(false) }}>
         <section className="create-rider-modal" role="dialog" aria-modal="true" aria-labelledby="create-rider-title">

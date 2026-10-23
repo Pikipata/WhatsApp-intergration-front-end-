@@ -67,3 +67,13 @@ export const transferConversation = (id: string, targetStaffId: string) => reque
   method: 'POST',
   body: JSON.stringify({ targetStaffId }),
 })
+export type NoteDirectoryEntry = {
+  conversation_id: string
+  display_name: string | null
+  phone: string
+  content: string
+  note_updated_at: string | null
+  activity_at: string
+}
+export const getNotesDirectory = () =>
+  request<NoteDirectoryEntry[]>('/api/notes')

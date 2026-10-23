@@ -172,6 +172,21 @@ kbd { min-width: 17px; padding: 1px 4px; border: 1px solid #e2e4dd; border-radiu
 .welcome-foot { display: flex; align-items: center; gap: 8px; margin-top: 41px; color: #949c92; font-family: var(--mono); font-size: 8px; letter-spacing: .8px; }
 .welcome-foot .live-dot { width: 6px; height: 6px; }
 .mobile-back { display: none; }
+.notes-directory-button { width: 100%; height: 34px; display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0 0 12px; border: 1px solid #d7e3d1; border-radius: 7px; color: #386148; background: #f2f7ec; font-size: 11px; font-weight: 650; cursor: pointer; }
+.notes-directory-button:hover:not(:disabled) { background: #e8f1df; }
+.notes-directory-button:disabled { opacity: .65; cursor: progress; }
+.notes-directory { min-height: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.notes-directory-item { display: flex; flex-direction: column; gap: 5px; padding: 11px; border: 1px solid #e5e9e1; border-radius: 8px; color: #68736a; background: #fff; text-align: left; cursor: pointer; }
+.notes-directory-item:hover { border-color: #aec0a7; }
+.notes-directory-item-heading { display: flex; justify-content: space-between; gap: 8px; }
+.notes-directory-item-heading strong { overflow: hidden; color: #445047; font-size: 11px; text-overflow: ellipsis; }
+.notes-directory-item time, .notes-directory-item > span { color: #969d95; font-size: 9px; }
+.notes-directory-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-history { max-height: 180px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e9e1; }
+.note-history > strong { color: #68736a; font-size: 10px; }
+.note-history > span, .note-history-item time { color: #969d95; font-size: 9px; }
+.note-history-item { padding: 9px; border: 1px solid #e5e9e1; border-radius: 7px; background: #fff; }
+.note-history-item p { margin: 6px 0 0; color: #4c574e; font-size: 10px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes arrive { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
