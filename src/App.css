@@ -313,3 +313,21 @@ kbd { min-width: 17px; padding: 1px 4px; border: 1px solid #e2e4dd; border-radiu
   flex: 0 0 auto;
   object-fit: contain;
 }
+.notes-directory-button {
+  background: var(--brand-red);   /* Inferno #AA1700 */
+  border-color: var(--brand-red);
+  color: #fff;
+}
+.notes-directory-button:hover:not(:disabled) {
+  background: #8a1200;
+  border-color: #8a1200;
+}
+.notes-directory-button {
+  background: #fbf0ee;
+  border-color: #f0d2cd;
+  color: var(--brand-red);
+}
+.notes-directory-button:hover:not(:disabled) {
+  background: #f6e1dd;
+  border-color: #e6bfb8;
+}
