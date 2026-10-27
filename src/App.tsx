@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState,type FormEvent, type WheelEvent } 
 import { Archive, ArrowLeft, Check, CheckCheck, ChevronDown, CircleHelp, Copy, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, UsersRound, Wifi, WifiOff, X } from 'lucide-react'
 import { createRider, getConversations, getHealth, getMessages, getNote, getNotesDirectory, saveNote, sendMessage, type Conversation, type Message, type NoteDirectoryEntry } from './api'
 import './App.css'
-
+import appIcon from './assets/pikipata-icon.png'
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?'
 }
@@ -309,7 +309,9 @@ function App() {
 
       <section className={`conversation-list ${selectedId ? 'has-selection' : ''}`} id="inbox" aria-label="Conversations" onWheel={(event) => routeWheel(event, '.conversation-items', '.conversation-items')}>
         <header className="list-header">
-          <div className="eyebrow"><span className="eyebrow-dot" /> PIKIPATA / MESSAGES</div>
+         <div className="eyebrow">
+  <img src={appIcon} alt="" className="eyebrow-icon" /> PIKIPATA / MESSAGES
+</div>
           <div className="list-title-row"><h1>Inbox</h1><span className="conversation-count">{conversations.length.toString().padStart(2, '0')}</span><button className="create-rider-button" type="button" onClick={() => { setShowCreateRider(true); setCreateRiderError('') }}><Plus size={14} /> Create rider</button></div>
                     <button className="notes-directory-button" type="button" onClick={() => void handleShowNotesDirectory()} disabled={loadingNotesDirectory}><UsersRound size={15} />{loadingNotesDirectory ? 'Loading notes…' : 'Conversations & notes'}</button>          <div className={`connection-pill ${connection}`}><span className="connection-dot" />{connection === 'connected' ? 'Connected' : connection === 'checking' ? 'Connecting' : 'Offline'}<ChevronDown size={13} /></div>
           <label className="search-box"><Search size={17} aria-hidden="true" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or number" aria-label="Search conversations" /><kbd>/</kbd></label>

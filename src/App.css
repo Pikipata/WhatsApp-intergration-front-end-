@@ -305,3 +305,11 @@ kbd { min-width: 17px; padding: 1px 4px; border: 1px solid #e2e4dd; border-radiu
 .filter-tabs button.selected { color: var(--brand-blue); }
 .loader { border-top-color: var(--brand-blue); }
 .thread-panel { background-image: radial-gradient(#e3e8fa .65px, transparent .65px); }
+.eyebrow-icon {
+  height: 16px;
+  width: auto;
+  max-width: 36px;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
