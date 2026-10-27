@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type WheelEvent } from 'react'
-import { Archive, ArrowLeft, ArrowRightLeft, Check, CheckCheck, ChevronDown, CircleHelp, Copy, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, UsersRound, Wifi, WifiOff, X } from 'lucide-react'
-import { createRider, getConversations, getHealth, getMessages, getNote, getNotesDirectory, saveNote, sendMessage, transferConversation, type Conversation, type Message, type NoteDirectoryEntry } from './api'
+import { useEffect, useMemo, useRef, useState,type FormEvent, type WheelEvent } from 'react'
+import { Archive, ArrowLeft, Check, CheckCheck, ChevronDown, CircleHelp, Copy, Inbox as InboxIcon, MessageCircle, PanelRightClose, PanelRightOpen, Plus, Search, Send, ShieldCheck, UsersRound, Wifi, WifiOff, X } from 'lucide-react'
+import { createRider, getConversations, getHealth, getMessages, getNote, getNotesDirectory, saveNote, sendMessage, type Conversation, type Message, type NoteDirectoryEntry } from './api'
 import './App.css'
 
 function initials(name: string) {
@@ -67,7 +67,6 @@ function App() {
   const [connection, setConnection] = useState<'checking' | 'connected' | 'offline'>('checking')
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
-  const [threadAccessVerified, setThreadAccessVerified] = useState(false)
   const [savingMessage, setSavingMessage] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [showCreateRider, setShowCreateRider] = useState(false)
@@ -79,10 +78,6 @@ function App() {
   const [noteHistory, setNoteHistory] = useState<NoteRevision[]>([])
   const [creatingRider, setCreatingRider] = useState(false)
   const [createRiderError, setCreateRiderError] = useState('')
-  const [showTransfer, setShowTransfer] = useState(false)
-  const [targetStaffId, setTargetStaffId] = useState('')
-  const [transferring, setTransferring] = useState(false)
-  const [transferError, setTransferError] = useState('')
   const [showNotePanel, setShowNotePanel] = useState(() => window.innerWidth > 1220)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -128,7 +123,6 @@ function App() {
     setMessages([])
     setNote('')
     setNoteUpdatedAt(null)
-    setThreadAccessVerified(false)
   }
 
   useEffect(() => {
@@ -148,7 +142,6 @@ function App() {
         setMessages(latestMessages)
         setNote(savedNote.content)
         setNoteUpdatedAt(savedNote.updated_at)
-        setThreadAccessVerified(true)
       } catch (cause) {
         if (active) {
           clearThread()
@@ -165,7 +158,6 @@ function App() {
         const latest = await getMessages(selectedId)
         if (active) {
           setMessages(latest)
-          setThreadAccessVerified(true)
         }
       } catch (cause) {
         if (active) {
@@ -284,29 +276,7 @@ function App() {
     } finally { setSavingNote(false) }
   }
 
-  async function handleTransfer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const destination = targetStaffId.trim()
-    if (!selected || !destination || transferring) return
-    setTransferring(true)
-    setTransferError('')
-    setError('')
-    try {
-      await transferConversation(selected.id, destination)
-      setConversations((current) => current.map((item) => (
-        item.id === selected.id ? { ...item, assigned_staff_id: destination } : item
-      )))
-      clearThread()
-      setSelectedId(null)
-      setShowTransfer(false)
-      setTargetStaffId('')
-      setNotice('Conversation transferred')
-    } catch (cause) {
-      setTransferError(cause instanceof Error ? cause.message : 'Conversation could not be transferred.')
-    } finally { setTransferring(false) }
-  }
-
-  async function handleCreateRider(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateRider(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (creatingRider) return
     setCreatingRider(true)
@@ -368,7 +338,7 @@ function App() {
             <button className="icon-button mobile-back" type="button" onClick={() => setSelectedId(null)} title="Back to inbox" aria-label="Back to inbox"><ArrowLeft size={19} /></button>
             <span className="contact-avatar thread-avatar">{initials(selected.display_name || selected.phone)}</span>
             <div className="thread-contact"><strong>{selected.display_name || selected.phone}</strong><span>{selected.phone} <i /> {selected.opted_out ? 'Opted out' : 'WhatsApp conversation'}</span></div>
-            <div className="thread-actions"><span className={`service-window ${selected.opted_out ? 'closed' : ''}`}><span />{selected.opted_out ? 'Opted out' : '24h service window'}</span><button className="transfer-chat-button" type="button" onClick={() => { setTransferError(''); setTargetStaffId(''); setShowTransfer(true) }} disabled={!threadAccessVerified} title={threadAccessVerified ? 'Transfer conversation to another caregiver' : 'Open this chat before transferring'}><ArrowRightLeft size={15} /><span>Transfer</span></button><button className="icon-button note-toggle" type="button" title={showNotePanel ? 'Hide inquiry note' : 'Show inquiry note'} aria-label={showNotePanel ? 'Hide inquiry note' : 'Show inquiry note'} onClick={() => setShowNotePanel((value) => !value)}>{showNotePanel ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</button></div>
+            <div className="thread-actions"><span className={`service-window ${selected.opted_out ? 'closed' : ''}`}><span />{selected.opted_out ? 'Opted out' : '24h service window'}</span><button className="icon-button note-toggle" type="button" title={showNotePanel ? 'Hide inquiry note' : 'Show inquiry note'} aria-label={showNotePanel ? 'Hide inquiry note' : 'Show inquiry note'} onClick={() => setShowNotePanel((value) => !value)}>{showNotePanel ? <PanelRightClose size={19} /> : <PanelRightOpen size={19} />}</button></div>
           </header>
           <div className="thread-date"><span /><span>Conversation</span><span /></div>
           <div className="message-scroll" aria-live="polite">
@@ -425,19 +395,6 @@ function App() {
             <span id="rider-phone-help" className="field-help">Include the country code, for example +254.</span>
             {createRiderError && <div className="modal-error" role="alert">{createRiderError}</div>}
             <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setShowCreateRider(false)}>Cancel</button><button className="create-submit-button" type="submit" disabled={creatingRider || !riderName.trim() || !riderPhone.trim()}>{creatingRider ? <span className="button-spinner" /> : <Plus size={15} />}{creatingRider ? 'Creating…' : 'Create rider'}</button></div>
-          </form>
-        </section>
-      </div>}
-      {showTransfer && selected && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !transferring) setShowTransfer(false) }}>
-        <section className="create-rider-modal" role="dialog" aria-modal="true" aria-labelledby="transfer-chat-title">
-          <header className="modal-header"><div><span className="eyebrow">HAND OFF CONVERSATION</span><h2 id="transfer-chat-title">Transfer chat</h2></div><button className="icon-button" type="button" title="Close" aria-label="Close transfer dialog" disabled={transferring} onClick={() => setShowTransfer(false)}><X size={19} /></button></header>
-          <p className="modal-description">Transfer <strong>{selected.display_name || selected.phone}</strong> to another customer caregiver. After transfer, you will no longer be able to read or reply to this chat.</p>
-          <form className="create-rider-form" onSubmit={handleTransfer}>
-            <label htmlFor="target-staff-id">Caregiver ID</label>
-            <input id="target-staff-id" name="targetStaffId" autoComplete="off" value={targetStaffId} onChange={(event) => setTargetStaffId(event.target.value)} placeholder="Enter caregiver ID" maxLength={128} required autoFocus />
-            <span className="field-help">Use the caregiver ID from your staff directory.</span>
-            {transferError && <div className="modal-error" role="alert">{transferError}</div>}
-            <div className="modal-actions"><button className="cancel-button" type="button" onClick={() => setShowTransfer(false)} disabled={transferring}>Cancel</button><button className="create-submit-button" type="submit" disabled={transferring || !targetStaffId.trim()}>{transferring ? <span className="button-spinner" /> : <ArrowRightLeft size={15} />}{transferring ? 'Transferring…' : 'Transfer chat'}</button></div>
           </form>
         </section>
       </div>}

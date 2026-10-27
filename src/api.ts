@@ -60,13 +60,6 @@ export const sendMessage = (id: string, text: string) => request<{ messageId: st
   `/api/conversations/${encodeURIComponent(id)}/messages`,
   { method: 'POST', body: JSON.stringify({ text }) },
 )
-export const transferConversation = (id: string, targetStaffId: string) => request<{
-  conversationId: string
-  assignedStaffId: string
-}>(`/api/conversations/${encodeURIComponent(id)}/transfer`, {
-  method: 'POST',
-  body: JSON.stringify({ targetStaffId }),
-})
 export type NoteDirectoryEntry = {
   conversation_id: string
   display_name: string | null
