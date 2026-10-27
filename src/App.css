@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 .desk-shell { display: grid; grid-template-columns: 70px 348px minmax(360px, 1fr) 286px; grid-template-rows: minmax(0, 1fr); min-height: 100vh; height: 100vh; overflow: hidden; position: relative; background: var(--canvas); }
 .app-rail { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 19px 0 17px; color: #f7f8f3; background: #202a26; }
 .brand-mark { width: 40px; height: 40px; display: grid; place-items: center; position: relative; color: #19231f; background: var(--lime); border-radius: 13px; text-decoration: none; }
@@ -222,3 +223,85 @@ kbd { min-width: 17px; padding: 1px 4px; border: 1px solid #e2e4dd; border-radiu
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+:root {
+  --brand-blue: #001DD4;      /* MediumBlue */
+  --brand-blue-dark: #0017A8; /* hover, derived from MediumBlue */
+  --brand-blue-tint: #eef1ff; /* light backgrounds */
+  --brand-blue-line: #c9d2fb; /* light borders */
+  --brand-red: #AA1700;       /* Inferno */
+  --brand-green: #006838;     /* Dark Emerald */
+
+  /* These feed the existing rules (send button, active tab underline, etc.) */
+  --green: var(--brand-blue);
+  --green-dark: var(--brand-blue-dark);
+  --lime: #ffffff;            /* brand-mark and rail indicator */
+}
+
+/* Fonts */
+.desk-shell { font-family: 'IBM Plex Sans', system-ui, sans-serif; } /* swap for Apparat if you have it */
+.list-title-row h1, .note-header h2, .modal-header h2, .welcome-panel h2 {
+  font-family: 'Libre Baskerville', serif;
+}
+
+/* The Inquiry note focus ring */
+.note-editor:focus,
+.note-editor:focus-visible {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(0, 29, 212, .15);
+}
+.search-box:focus-within { border-color: var(--brand-blue); }
+.composer:focus-within { border-color: var(--brand-blue); box-shadow: 0 5px 22px rgba(0, 29, 212, .10); }
+.create-rider-form input:focus { border-color: var(--brand-blue); outline: 2px solid var(--brand-blue-tint); }
+
+/* Rail */
+.app-rail { background: var(--brand-blue); }
+.rail-divider { background: rgba(255,255,255,.25); }
+.rail-button { color: #c5cffa; }
+.rail-button:hover { color: #fff; background: rgba(255,255,255,.14); }
+.rail-button.is-active { color: #fff; background: rgba(255,255,255,.22); }
+.brand-mark { color: var(--brand-blue); background: #fff; }
+.brand-spark { background: var(--brand-red); border-color: #fff; }
+.staff-avatar { background: var(--brand-blue-dark); border-color: #8fa0f5; color: #fff; }
+
+/* Secondary buttons */
+.create-rider-button, .notes-directory-button, .save-note-button {
+  color: var(--brand-blue); background: var(--brand-blue-tint); border-color: var(--brand-blue-line);
+}
+.create-rider-button:hover, .notes-directory-button:hover:not(:disabled), .save-note-button:hover:not(:disabled) {
+  background: #e0e6ff; border-color: #aebaf8;
+}
+.create-submit-button { border-color: var(--brand-blue-dark); }
+
+/* Selected / tinted states */
+.conversation-item.selected { background: var(--brand-blue-tint); }
+.selection-mark { background: var(--brand-blue); }
+.tab-count { color: var(--brand-blue); background: var(--brand-blue-tint); }
+.outbound .message-bubble { background: var(--brand-blue-tint); border-color: var(--brand-blue-line); color: #1a2a6c; }
+.notes-directory-item:hover { border-color: var(--brand-blue); }
+.contact-avatar, .message-avatar { color: var(--brand-blue); background: var(--brand-blue-tint); }
+.note-lock { color: var(--brand-blue); background: var(--brand-blue-tint); border-color: var(--brand-blue-line); }
+
+/* Status indicators stay Dark Emerald, so green still means "OK" */
+.eyebrow-dot { background: var(--brand-green); box-shadow: 0 0 0 3px #e3f1ea; }
+.connection-pill.connected .connection-dot, .live-dot { background: var(--brand-green); box-shadow: 0 0 0 3px #e3f1ea; }
+.service-window { color: var(--brand-green); background: #eef7f2; border-color: #cfe6da; }
+.service-window > span { background: var(--brand-green); }
+.service-window.closed { color: var(--brand-red); background: #fbf0ee; border-color: #f0d2cd; }
+.service-window.closed > span { background: var(--brand-red); }
+.toast { color: var(--brand-green); background: #eef7f2; border-color: #cfe6da; }
+.toast svg { color: var(--brand-green); }
+.message-status { color: var(--brand-green); }
+.connection-pill.offline .connection-dot { background: var(--brand-red); }
+.graphic-bubble {
+  color: var(--brand-blue);
+  background: var(--brand-blue-tint);
+  border-color: var(--brand-blue-line);
+  box-shadow: 7px 9px 0 #dbe2ff;
+}
+.graphic-line { background: var(--brand-blue-line); }
+.graphic-spark { color: var(--brand-red); }
+.empty-symbol { color: var(--brand-blue); background: var(--brand-blue-tint); }
+.filter-tabs button.selected { color: var(--brand-blue); }
+.loader { border-top-color: var(--brand-blue); }
+.thread-panel { background-image: radial-gradient(#e3e8fa .65px, transparent .65px); }
